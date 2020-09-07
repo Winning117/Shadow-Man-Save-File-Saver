@@ -1,0 +1,3 @@
+saves_location="C:\Users\joshm\Programs\steam\steamapps\common\ShadowMan\Saves" # put the location of your Saves folder here. By default the file is at `\steam\steamapps\common\ShadowMan\Saves`
+convert_windows_to_linux=true # if set to true, converts the value in saves_location to the Windows Subsystem for Linux format. Only set this to true if you're running the script from the Windows Subsystem for Linux.
+poll_rate_in_seconds=5 # how often the save folder should be checked
