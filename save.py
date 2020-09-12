@@ -3,16 +3,48 @@ import os
 import sys
 import time
 import shutil
-import zipfile
 import datetime
 import hashlib
 
-def md5(fname):
-    hash_md5 = hashlib.md5()
-    with open(fname, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
+
+def get_directory_md5_hash(directory, verbose=0):
+    """
+    Calculates the md5 hash of the specified directory
+    """
+    SHAhash = hashlib.md5()
+    if not os.path.exists (directory):
+        return -1
+
+    for root, dirs, files in os.walk(directory):
+        for names in files:
+            if verbose == 1:
+                print('Hashing', names)
+            filepath = os.path.join(root,names)
+            try:
+                f1 = open(filepath, 'rb')
+            except:
+                # You can't open the file for some reason
+                f1.close()
+                continue
+
+            while 1:
+                # Read file in as little chunks
+                buf = f1.read(4096)
+                if not buf : break
+                SHAhash.update(hashlib.md5(buf).digest())
+            f1.close()
+
+    return SHAhash.hexdigest()
+
+def zip_folder(folder_location):
+    """
+    Zips up the specified folder location
+    """
+    this_file_location = os.path.dirname(os.path.abspath(__file__))
+    time_now = datetime.datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
+    zip_save_location = this_file_location + "/" + time_now
+    shutil.make_archive(zip_save_location, "zip", folder_location)
+    print(f"Saved zip file to '{zip_save_location}.zip'")
 
 def main():
     with open("settings.txt") as settings_file:
@@ -41,43 +73,25 @@ def main():
         save_folder_location = "/mnt/" + drive_name + path_without_drive
 
     print(f"Checking the folder '{save_folder_location}' for Shadow Man saves...")
-    if os.path.exists(save_folder_location):
-        files_in_save_location = os.listdir(save_folder_location)
-    else:
-        print(f"Unable to find folder '{save_folder_location}'!")
+    if not os.path.exists(save_folder_location):
+        print(f"ERROR: Unable to find folder '{save_folder_location}'!")
         sys.exit(1)
 
-    time_now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    initial_hash = get_directory_md5_hash(save_folder_location)
+    zip_folder(save_folder_location) # zip up the original folder when this script is launched so the user can revert to the original save
 
-    this_file_location = os.path.dirname(os.path.abspath(__file__))
-    zip_save_location = this_file_location + "/" + time_now + "_initial"
-    print(f"Initial files saved to '{zip_save_location}'")
-    shutil.make_archive(zip_save_location, "zip", save_folder_location)
-
-    initial_file_hash = md5(zip_save_location + ".zip")
-    print(f"The file hash is {initial_file_hash}")
-
-    latest_file_hash = initial_file_hash
-
-    while True:
+    while True: # check to see if the files have changed every X seconds. If they have, then save a copy of it
         try:
-            time_now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-            this_file_location = os.path.dirname(os.path.abspath(__file__))
-            zip_save_location = this_file_location + "/" + time_now
-            shutil.make_archive(zip_save_location, "zip", save_folder_location)
-            this_file_hash = md5(zip_save_location + ".zip")
-            if this_file_hash == latest_file_hash:
-                print(f"{this_file_hash} == {latest_file_hash}")
-                os.remove(zip_save_location + ".zip")
-            else:
-                latest_file_hash = this_file_hash
+            directory_hash = get_directory_md5_hash(save_folder_location)
+
+            if directory_hash != initial_hash:
+                zip_folder(save_folder_location)
+                initial_hash = directory_hash # overwrite the hash that we compare against
 
             time.sleep(poll_rate_in_seconds)
         except KeyboardInterrupt:
             print("\nCtrl-C caught! Exiting...")
             break
-
-        # TODO: ONLY ZIP THE FILE IF THE HASH IS DIFFERENT
 
 
 if __name__ == "__main__":
