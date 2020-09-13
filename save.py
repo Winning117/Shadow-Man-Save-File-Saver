@@ -7,18 +7,13 @@ import datetime
 import hashlib
 
 
-def get_directory_md5_hash(directory, verbose=0):
+def get_directory_md5_hash(directory):
     """
     Calculates the md5 hash of the specified directory
     """
-    SHAhash = hashlib.md5()
-    if not os.path.exists (directory):
-        return -1
-
-    for root, dirs, files in os.walk(directory):
+    md5_sum = hashlib.md5()
+    for root, _, files in os.walk(directory):
         for names in files:
-            if verbose == 1:
-                print('Hashing', names)
             filepath = os.path.join(root,names)
             try:
                 f1 = open(filepath, 'rb')
@@ -27,14 +22,14 @@ def get_directory_md5_hash(directory, verbose=0):
                 f1.close()
                 continue
 
-            while 1:
+            while True:
                 # Read file in as little chunks
                 buf = f1.read(4096)
-                if not buf : break
-                SHAhash.update(hashlib.md5(buf).digest())
+                if not buf:
+                    break
+                md5_sum.update(hashlib.md5(buf).digest())
             f1.close()
-
-    return SHAhash.hexdigest()
+    return md5_sum.hexdigest()
 
 def zip_folder(folder_location):
     """
